@@ -77,7 +77,7 @@ struct UsagePane: View {
             } label: {
                 Text("Show Limits")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
                     .background(Capsule().fill(Theme.surfaceHover))
@@ -123,7 +123,7 @@ struct UsagePane: View {
             HStack(spacing: 6) {
                 Text(name)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                 if let plan {
                     Text(plan)
                         .font(.system(size: 9.5, weight: .medium))
@@ -171,7 +171,7 @@ struct UsagePane: View {
                 }
                 Text("\(Int(percent.rounded()))%")
                     .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .frame(minWidth: 30, alignment: .trailing)
             }
             GeometryReader { geo in
@@ -271,12 +271,14 @@ struct UsagePane: View {
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
-    /// White while there is room, then the colours of a warning.
-    private static func tint(_ percent: Double) -> Color {
+    /// The text colour while there is room, then the theme's warning. Past
+    /// 90% it is red in every theme: no palette has a role for "about to
+    /// stop", and a warning tone that only deepens reads as the same one.
+    private static func tint(_ percent: Double) -> AnyShapeStyle {
         switch percent {
-        case ..<75: .white.opacity(0.85)
-        case ..<90: .yellow.opacity(0.85)
-        default: .red.opacity(0.85)
+        case ..<75: AnyShapeStyle(Theme.text.opacity(0.85))
+        case ..<90: AnyShapeStyle(Theme.warning)
+        default: AnyShapeStyle(Color.red.opacity(0.85))
         }
     }
 }
