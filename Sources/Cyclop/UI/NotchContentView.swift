@@ -130,9 +130,7 @@ struct NotchContentView: View {
             CurrencyRateDate(currencies: vm.currencies)
         case .notes:
             NotesCounter(notes: vm.notes)
-        case .teleprompter:
-            EmptyView()
-        case .settings:
+        case .usage, .teleprompter, .settings:
             EmptyView()
         }
     }
@@ -199,6 +197,8 @@ struct NotchContentView: View {
             CurrencyPane(currencies: vm.currencies, wantsKeyboard: $panel.wantsKeyboard)
         case .notes:
             NotesPane(notes: vm.notes, privacy: vm.privacy, wantsKeyboard: $panel.wantsKeyboard)
+        case .usage:
+            UsagePane(usage: vm.usage)
         case .teleprompter:
             TeleprompterPane(prompter: vm.teleprompter, wantsKeyboard: $panel.wantsKeyboard)
         case .settings:

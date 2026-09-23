@@ -122,3 +122,27 @@
 "Paste the script here" = "Paste the script here";
 "Ready" = "Ready";
 "Done" = "Done";
+
+/* AI Usage tab: limits and tokens of Claude Code and Codex. */
+"AI Usage" = "AI Usage";
+"Claude Limits from Keychain" = "Claude Limits from Keychain";
+"Loading…" = "Loading…";
+"Claude Code is signed out, or its sign-in has expired. Run it once and it renews." = "Claude Code is signed out, or its sign-in has expired. Run it once and it renews.";
+"Could not load limits: %@" = "Could not load limits: %@";
+"Unexpected answer" = "Unexpected answer";
+"Too many requests" = "Too many requests";
+"Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain." = "Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain.";
+"Show Limits" = "Show Limits";
+"Updated %@" = "Updated %@";
+"No limits yet: Codex writes them during a session." = "No limits yet: Codex writes them during a session.";
+"Tokens: today %@ · 7 days %@" = "Tokens: today %@ · 7 days %@";
+"No Claude Code or Codex on this Mac" = "No Claude Code or Codex on this Mac";
+"The tab reads their logs in ~/.claude and ~/.codex" = "The tab reads their logs in ~/.claude and ~/.codex";
+"Week" = "Week";
+"%d d" = "%d d";
+"%d h" = "%d h";
+"%d min" = "%d min";
+"Limit" = "Limit";
+"%@K" = "%@K";
+"%@M" = "%@M";
+"%@B" = "%@B";

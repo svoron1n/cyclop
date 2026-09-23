@@ -18,6 +18,7 @@ struct SettingsPane: View {
     @State private var allDisplays = NotchGeometry.showsOnAllDisplays
     @State private var fullSizeNotch = NotchGeometry.drawsFullSizeNotch
     @State private var watchScreenshotFolder = false
+    @State private var claudeLimits = false
     @State private var screenshotUsage: (files: Int, bytes: Int64) = (0, 0)
 
     var body: some View {
@@ -99,6 +100,17 @@ struct SettingsPane: View {
                     }
                 }
 
+                // The way back out of the button on the AI tab: turning the
+                // limits on is done there, where it is explained; here it
+                // can only be seen and undone.
+                section(localized("AI Usage")) {
+                    toggleRow(
+                        symbol: "key",
+                        title: localized("Claude Limits from Keychain"),
+                        isOn: claudeLimitsBinding
+                    )
+                }
+
                 // What lives in this file is documented in #67: everything
                 // above that makes sense on another Mac, in one place instead
                 // of five.
@@ -136,6 +148,7 @@ struct SettingsPane: View {
             allDisplays = NotchGeometry.showsOnAllDisplays
             fullSizeNotch = NotchGeometry.drawsFullSizeNotch
             watchScreenshotFolder = screenshots.isEnabled
+            claudeLimits = vm.usage.claudeLimitsEnabled
             refreshUsage()
         }
     }
@@ -230,6 +243,16 @@ struct SettingsPane: View {
                     screenshots.disable()
                     watchScreenshotFolder = false
                 }
+            }
+        )
+    }
+
+    private var claudeLimitsBinding: Binding<Bool> {
+        Binding(
+            get: { claudeLimits },
+            set: { wants in
+                claudeLimits = wants
+                vm.usage.claudeLimitsEnabled = wants
             }
         )
     }

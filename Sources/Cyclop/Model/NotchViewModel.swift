@@ -4,7 +4,7 @@ import Combine
 @MainActor
 final class NotchViewModel: ObservableObject {
     enum Tab: String, CaseIterable, Identifiable {
-        case media, shelf, clipboard, snippets, calendar, translate, currency, notes, teleprompter, settings
+        case media, shelf, clipboard, snippets, calendar, translate, currency, notes, usage, teleprompter, settings
         var id: String { rawValue }
 
         var symbol: String {
@@ -17,6 +17,7 @@ final class NotchViewModel: ObservableObject {
             case .translate: return "translate"
             case .currency: return "dollarsign.circle"
             case .notes: return "note.text"
+            case .usage: return "gauge.with.dots.needle.33percent"
             case .teleprompter: return "text.viewfinder"
             case .settings: return "gearshape.fill"
             }
@@ -32,6 +33,7 @@ final class NotchViewModel: ObservableObject {
             case .translate: return localized("Translate")
             case .currency: return localized("Currency")
             case .notes: return localized("Notes")
+            case .usage: return localized("AI Usage")
             case .teleprompter: return localized("Teleprompter")
             case .settings: return localized("Settings")
             }
@@ -53,15 +55,16 @@ final class NotchViewModel: ObservableObject {
         /// shrink every icon on the rail to make room, which is the same
         /// objection in a quieter voice. Growth continues in a second column
         /// on the right, which the scratch notes open: they are the daily tab
-        /// of that column, so they sit where the pointer lands first. The rare
-        /// modes — the converter, the teleprompter — come after them, by the
+        /// of that column, so they sit where the pointer lands first. The AI
+        /// limits follow — glanced at between prompts, several times a day.
+        /// The rare modes — the converter, the teleprompter — come after, by the
         /// rule from #43 that the rail is ordered by how often a tab is
         /// glanced at. Settings joins that column rather than the content
         /// rail: it is not something to hover past on the way to a track or a
         /// calendar, so it sits last, furthest from the tabs people actually
         /// rest on.
         static let leftRail: [Tab] = [.media, .shelf, .clipboard, .snippets, .calendar, .translate]
-        static let rightRail: [Tab] = [.notes, .currency, .teleprompter, .settings]
+        static let rightRail: [Tab] = [.notes, .usage, .currency, .teleprompter, .settings]
     }
 
     /// What every screen's panel adds up to, kept by `NotchController`: this
@@ -139,7 +142,9 @@ final class NotchViewModel: ObservableObject {
             screenshotFolder.resumeIfEnabled()
         case .currency:
             currencies.start()
-        case .snippets, .translate, .notes, .teleprompter, .settings:
+        // The AI tab rescans only while its pane is on screen — see
+        // `AIUsageStore` — so there is nothing to start here.
+        case .snippets, .translate, .notes, .usage, .teleprompter, .settings:
             break
         }
     }
@@ -151,7 +156,7 @@ final class NotchViewModel: ObservableObject {
         case .calendar: calendar.stop()
         case .shelf: screenshotFolder.stop()
         case .currency: currencies.stop()
-        case .snippets, .translate, .notes, .teleprompter, .settings: break
+        case .snippets, .translate, .notes, .usage, .teleprompter, .settings: break
         }
     }
 
@@ -230,6 +235,7 @@ final class NotchViewModel: ObservableObject {
     let snippets: SnippetStore
     let notes: NoteStore
     let teleprompter: TeleprompterStore
+    let usage: AIUsageStore
     /// Shared by every pane that shows something worth not showing.
     let privacy = PrivacyMode()
 
@@ -246,6 +252,7 @@ final class NotchViewModel: ObservableObject {
         self.snippets = SnippetStore()
         self.notes = NoteStore()
         self.teleprompter = TeleprompterStore()
+        self.usage = AIUsageStore()
 
         // The panel header reads through to the stores — counters, the source
         // name, the equalizer. Nested ObservableObjects do not propagate on
