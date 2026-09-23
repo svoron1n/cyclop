@@ -77,7 +77,7 @@ struct SpoilerField: View {
 
         for (index, path) in buckets.enumerated() where !path.isEmpty {
             let alpha = (Double(index) + 0.5) / Double(steps)
-            context.fill(path, with: .color(.white.opacity(alpha * 0.85)))
+            context.fill(path, with: .style(Theme.text.opacity(alpha * 0.85)))
         }
     }
 }
@@ -109,7 +109,7 @@ struct SpoilerText: View {
     let text: String
     let hidden: Bool
     var font: Font = .system(size: 11)
-    var color: Color = .white
+    var color: ThemeColor = Theme.text
     /// Height of the field that stands in for the text, so a covered row is
     /// exactly as tall as an uncovered one.
     var height: CGFloat = 12
@@ -179,7 +179,7 @@ struct PrivacySwitch: View {
         } label: {
             Image(systemName: covering ? "eye.slash.fill" : "eye")
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(covering ? Color.white.opacity(0.8) : Theme.secondary)
+                .foregroundStyle(covering ? Theme.text.opacity(0.8) : Theme.secondary)
         }
         .buttonStyle(.plain)
         // The switch in the snippets tab stands next to the search field, and a

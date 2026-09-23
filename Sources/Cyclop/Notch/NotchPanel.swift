@@ -117,6 +117,9 @@ final class NotchPanel: NSPanel {
         // is, and on a Mac set to light it is told black. The result is a field
         // one can type into and not read: the caret blinks, the text lands, and
         // none of it is visible against the panel.
+        //
+        // Dark is where it starts; a light theme switches it over from inside
+        // the panel (`WindowAppearance` in NotchContentView.swift).
         appearance = NSAppearance(named: .darkAqua)
 
         isFloatingPanel = true

@@ -42,7 +42,7 @@ struct SnippetsPane: View {
             TextField("", text: $snippets.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .tint(Theme.secondary)
                 .focused($focused, equals: .search)
                 .onKeyPress(.escape) {
@@ -88,7 +88,7 @@ struct SnippetsPane: View {
         HStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.yellow.opacity(0.85))
+                .foregroundStyle(Theme.warning)
             Text("snippets.json is broken — click to open; nothing is overwritten")
                 .font(.system(size: 10))
                 .foregroundStyle(Theme.secondary)
@@ -113,7 +113,7 @@ struct SnippetsPane: View {
             TextField(localized("Name"), text: $draftLabel)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .tint(Theme.secondary)
                 .padding(.horizontal, 7)
                 .frame(width: 104, height: 20)
@@ -127,7 +127,7 @@ struct SnippetsPane: View {
             TextField(localized("Text"), text: $draftText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .tint(Theme.secondary)
                 .padding(.horizontal, 7)
                 .frame(height: 20)
@@ -141,7 +141,7 @@ struct SnippetsPane: View {
             Button { commit() } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(draftText.isEmpty ? Theme.tertiary : Color.green)
+                    .foregroundStyle(draftText.isEmpty ? Theme.tertiary : Theme.success)
             }
             .buttonStyle(.plain)
             .pointerStyle(.default)
@@ -270,7 +270,7 @@ private struct SnippetRow: View {
             if !editing {
                 Image(systemName: justCopied ? "checkmark" : item.symbol)
                 .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(justCopied ? Color.green : Theme.tertiary)
+                    .foregroundStyle(justCopied ? Theme.success : Theme.tertiary)
                     .frame(width: 14)
             }
             // The name stays legible while the value is covered: the row has to
@@ -286,7 +286,7 @@ private struct SnippetRow: View {
                 TextField(localized("Name"), text: $draftLabel)
                     .textFieldStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .tint(Theme.secondary)
                     .padding(.horizontal, 7)
                     .frame(width: 104, height: 20)
@@ -300,7 +300,7 @@ private struct SnippetRow: View {
                 TextField(localized("Text"), text: $draftText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 11))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .tint(Theme.secondary)
                     .padding(.horizontal, 7)
                     .frame(height: 20)
@@ -314,7 +314,7 @@ private struct SnippetRow: View {
                 Button { commit() } label: {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(draftText.isEmpty ? Theme.tertiary : Color.green)
+                        .foregroundStyle(draftText.isEmpty ? Theme.tertiary : Theme.success)
                 }
                 .buttonStyle(.plain)
                 .disabled(draftText.isEmpty)
@@ -329,14 +329,14 @@ private struct SnippetRow: View {
                 if !item.label.isEmpty {
                     Text(item.label)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
                         .lineLimit(1)
                         .layoutPriority(1)
                 }
                 SpoilerText(
                     text: item.text.replacingOccurrences(of: "\n", with: " "),
                     hidden: hidden,
-                    color: item.label.isEmpty ? .white : Theme.secondary,
+                    color: item.label.isEmpty ? Theme.text : Theme.secondary,
                     seed: UInt64(bitPattern: Int64(item.id.hashValue))
                 )
             }

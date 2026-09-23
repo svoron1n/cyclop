@@ -18,6 +18,30 @@ import AppKit
 /// and written. The old keys are then left alone: rolling back to a build
 /// before this one loses a few switches rather than this app carrying two
 /// sources of truth for one release (decided in #67).
+/// The theme as `config.json` keeps it: a preset by name and, on top of it,
+/// up to four colours of one's own as `#RRGGBB`. Strings rather than
+/// `ThemePreset` and `Color` for the same reason `privacy` is `[String]`: the
+/// store keeps what the file says, and `Palette.init(_:)` decides what it
+/// means — including what to do with a name or a colour it does not know.
+struct ThemeChoice: Codable, Equatable {
+    var preset = "standard"
+    var background: String?
+    var header: String?
+    var icons: String?
+    var accent: String?
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        preset = try c.decodeIfPresent(String.self, forKey: .preset) ?? "standard"
+        background = try c.decodeIfPresent(String.self, forKey: .background)
+        header = try c.decodeIfPresent(String.self, forKey: .header)
+        icons = try c.decodeIfPresent(String.self, forKey: .icons)
+        accent = try c.decodeIfPresent(String.self, forKey: .accent)
+    }
+}
+
 @MainActor
 final class ConfigStore: ObservableObject {
     private struct Teleprompter: Codable, Equatable {
@@ -32,6 +56,7 @@ final class ConfigStore: ObservableObject {
         var teleprompter = Teleprompter()
         var hiddenTabs: [String] = []
         var fullSizeDrawnNotch = false
+        var theme = ThemeChoice()
 
         init() {}
 
@@ -49,6 +74,7 @@ final class ConfigStore: ObservableObject {
             teleprompter = try c.decodeIfPresent(Teleprompter.self, forKey: .teleprompter) ?? d.teleprompter
             hiddenTabs = try c.decodeIfPresent([String].self, forKey: .hiddenTabs) ?? d.hiddenTabs
             fullSizeDrawnNotch = try c.decodeIfPresent(Bool.self, forKey: .fullSizeDrawnNotch) ?? d.fullSizeDrawnNotch
+            theme = try c.decodeIfPresent(ThemeChoice.self, forKey: .theme) ?? d.theme
         }
     }
 
@@ -130,6 +156,19 @@ final class ConfigStore: ObservableObject {
     var hiddenTabs: [String] {
         get { value.hiddenTabs }
         set { value.hiddenTabs = newValue; persist() }
+    }
+
+    /// The only setting here that views watch rather than read once: the
+    /// whole panel is painted from it, so a change has to reach every view at
+    /// once — see `NotchContentView`, which hands it down as a `Palette`.
+    var theme: ThemeChoice {
+        get { value.theme }
+        set {
+            guard newValue != value.theme else { return }
+            objectWillChange.send()
+            value.theme = newValue
+            persist()
+        }
     }
 
     // MARK: - Migration

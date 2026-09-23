@@ -51,7 +51,7 @@ struct CalendarPane: View {
             if showingCalendars {
                 Text(localized("Done"))
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Capsule().fill(Theme.surfaceHover))
@@ -86,7 +86,7 @@ struct CalendarPane: View {
                             HStack(spacing: 8) {
                                 Image(systemName: option.isShown ? "checkmark.square.fill" : "square")
                                     .font(.system(size: 13))
-                                    .foregroundStyle(option.isShown ? .white : Theme.tertiary)
+                                    .foregroundStyle(option.isShown ? Theme.text : Theme.tertiary)
                                 Text(option.title)
                                     .font(.system(size: 12))
                                     .foregroundStyle(Theme.secondary)
@@ -145,9 +145,9 @@ struct CalendarPane: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
                         .background(
-                            Capsule().fill(next.isRunning ? Color.white.opacity(0.92) : Theme.surfaceHover)
+                            Capsule().fill(next.isRunning ? Theme.text.opacity(0.92) : Theme.surfaceHover)
                         )
-                        .foregroundStyle(next.isRunning ? .black : .white)
+                        .foregroundStyle(next.isRunning ? Theme.background : Theme.text)
                     }
                     .buttonStyle(.plain)
                     .padding(.leading, 14)
@@ -212,7 +212,7 @@ struct CalendarPane: View {
         } label: {
             Image(systemName: "video.fill")
                 .font(.system(size: 9))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .frame(width: 18, height: 18)
                 .background(Circle().fill(Theme.surfaceHover))
         }
@@ -296,7 +296,7 @@ struct CalendarPane: View {
             } label: {
                 Text("Continue")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .background(Capsule().fill(Theme.surfaceHover))
