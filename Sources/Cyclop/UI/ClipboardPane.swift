@@ -52,7 +52,7 @@ private struct ClipRow: View {
         HStack(spacing: 9) {
             Image(systemName: justCopied ? "checkmark" : item.symbol)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(justCopied ? Color.green : Theme.tertiary)
+                .foregroundStyle(justCopied ? Theme.success : Theme.tertiary)
                 .frame(width: 14)
             SpoilerText(
                 text: item.preview.replacingOccurrences(of: "\n", with: " "),

@@ -5,6 +5,7 @@ struct NotchContentView: View {
     /// This screen's share of the panel. Everything the pointer decides is
     /// here; everything shown is in `vm`, the same on every display.
     @ObservedObject var panel: PanelState
+    @ObservedObject private var config = ConfigStore.shared
 
     private var isOpen: Bool { panel.isActive }
     private var size: CGSize { panel.bodySize }
@@ -40,14 +41,31 @@ struct NotchContentView: View {
     }
 
     var body: some View {
+        let palette = Palette(config.theme)
+        return themed
+            .environment(\.palette, palette)
+            .background(WindowAppearance(isDark: palette.isDark).frame(width: 0, height: 0))
+    }
+
+    private var themed: some View {
         // The shape is wider than the body by `topRadius` on each side: that
         // slack is where the concave shoulders live, so it must not be clipped.
         ZStack(alignment: .top) {
-            NotchShape(
+            // The header strip is painted over the top of the same
+            // silhouette. Folded, the body is nothing but that strip, so a
+            // drawn notch takes the header's colour — on the standard theme
+            // black, as it always was.
+            ZStack(alignment: .top) {
+                Rectangle().fill(Theme.background)
+                Rectangle()
+                    .fill(Theme.header)
+                    .frame(height: min(panel.geometry.notchSize.height, size.height))
+            }
+            .clipShape(NotchShape(
                 topRadius: topRadius,
                 bottomRadius: isOpen ? Theme.openBottomRadius : Theme.collapsedBottomRadius
-            )
-            .fill(paintsShape ? Color.black : Color.clear)
+            ))
+            .opacity(paintsShape ? 1 : 0)
             .frame(width: size.width + 2 * topRadius, height: size.height)
             .shadow(color: .black.opacity(isOpen ? 0.5 : 0), radius: 18, y: 8)
 
@@ -81,7 +99,7 @@ struct NotchContentView: View {
                 Text(vm.tab.title.uppercased())
                     .font(.system(size: 9, weight: .semibold))
                     .tracking(0.8)
-                    .foregroundStyle(Theme.tertiary)
+                    .foregroundStyle(Theme.headerText)
                     .padding(.leading, 16)
                     .id(vm.tab)
                     .transition(.opacity)
@@ -108,7 +126,7 @@ struct NotchContentView: View {
                 }
                 Text(vm.media.sourceName ?? "")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Theme.tertiary)
+                    .foregroundStyle(Theme.headerText)
             }
         case .shelf:
             counter(vm.shelf.items.count)
@@ -120,7 +138,7 @@ struct NotchContentView: View {
             if let next = vm.calendar.next {
                 Text(CalendarPane.countdown(to: next, from: vm.calendar.now))
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(next.isRunning ? Color.white.opacity(0.8) : Theme.tertiary)
+                    .foregroundStyle(next.isRunning ? Theme.headerTextStrong : Theme.headerText)
             }
         case .translate:
             // Nothing: the columns name both languages already, and the strip
@@ -140,7 +158,7 @@ struct NotchContentView: View {
         if value > 0 {
             Text("\(value)")
                 .font(.system(size: 10, weight: .medium).monospacedDigit())
-                .foregroundStyle(Theme.tertiary)
+                .foregroundStyle(Theme.headerText)
         }
     }
 
@@ -218,7 +236,7 @@ private struct NotesCounter: View {
         if !notes.notes.isEmpty {
             Text("\(notes.notes.count)")
                 .font(.system(size: 10, weight: .medium).monospacedDigit())
-                .foregroundStyle(Theme.tertiary)
+                .foregroundStyle(Theme.headerText)
         }
     }
 }
@@ -233,7 +251,7 @@ private struct CurrencyRateDate: View {
         if let date = currencies.rateDate {
             Text(date)
                 .font(.system(size: 10, weight: .medium).monospacedDigit())
-                .foregroundStyle(Theme.tertiary)
+                .foregroundStyle(Theme.headerText)
         }
     }
 }
@@ -270,7 +288,7 @@ private struct Rail: View {
                             RoundedRectangle(cornerRadius: 7, style: .continuous)
                                 .fill(fill(for: tab))
                         )
-                        .foregroundStyle(vm.tab == tab ? Color.white : Theme.tertiary)
+                        .foregroundStyle(vm.tab == tab ? Theme.icon : Theme.iconInactive)
                         .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                         // A render-time transform. Growing the frame instead
                         // would re-lay out the rail on every hover, and layout
@@ -306,8 +324,43 @@ private struct Rail: View {
         }
     }
 
-    private func fill(for tab: NotchViewModel.Tab) -> Color {
+    private func fill(for tab: NotchViewModel.Tab) -> ThemeColor {
         if vm.tab == tab { return Theme.surfaceHover }
-        return hovered == tab ? Theme.surface : .clear
+        return hovered == tab ? Theme.surface : Theme.clear
+    }
+}
+
+/// Keeps the window's appearance in step with the theme. The AppKit views
+/// under SwiftUI's text fields take the caret, placeholder and selection
+/// colours from it, not from the palette — see `NotchPanel.init`.
+private struct WindowAppearance: NSViewRepresentable {
+    let isDark: Bool
+
+    func makeNSView(context: Context) -> Probe { Probe() }
+
+    func updateNSView(_ view: Probe, context: Context) {
+        view.isDark = isDark
+    }
+
+    /// Asks again once it lands in a window: on the first update it is not in
+    /// one yet.
+    final class Probe: NSView {
+        var isDark = true {
+            didSet { apply() }
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+
+        /// Not a click target — it only exists to find the window.
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        private func apply() {
+            let name: NSAppearance.Name = isDark ? .darkAqua : .aqua
+            guard let window, window.appearance?.name != name else { return }
+            window.appearance = NSAppearance(named: name)
+        }
     }
 }

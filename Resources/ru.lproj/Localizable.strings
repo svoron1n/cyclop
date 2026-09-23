@@ -24,6 +24,16 @@
 "Show on All Displays" = "Показывать на всех дисплеях";
 "Full-Height Notch Without a Cutout" = "Высокая чёлка на экранах без выреза";
 
+"Appearance" = "Оформление";
+"Standard" = "Стандартная";
+"Forró Dark" = "Forró тёмная";
+"Forró Light" = "Forró светлая";
+"Background" = "Фон";
+"Header" = "Заголовок";
+"Tab Icons" = "Иконки вкладок";
+"Accent" = "Акцент";
+"As in the Theme" = "Как в теме";
+
 "Screenshots" = "Скриншоты";
 "Save Clipboard Screenshots" = "Сохранять скриншоты из буфера";
 "Watch Screenshots Folder" = "Отслеживать папку снимков";
