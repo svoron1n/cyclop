@@ -29,7 +29,7 @@ struct NotchGeometry {
     /// free to give.
     let expandedSize = CGSize(width: 620, height: 208)
 
-    /// Body for the teleprompter, the one tab that asks for more.
+    /// Body for the tabs that ask for more — the teleprompter and Settings.
     ///
     /// Same width, so the panel does not change shape sideways — only the
     /// bottom edge moves, and it moves away from the notch rather than around

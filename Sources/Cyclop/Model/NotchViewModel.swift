@@ -45,6 +45,11 @@ final class NotchViewModel: ObservableObject {
             self == .translate || self == .currency || self == .snippets || self == .notes
         }
 
+        /// Tabs that open to the taller body. The teleprompter needs a
+        /// paragraph in view to be one; Settings is a long list of switches
+        /// that the standard 208 pt turned into a scroll through a slot.
+        var isTall: Bool { self == .teleprompter || self == .settings }
+
         /// Every tab can be taken off the rail except the one the switches
         /// live on: with Settings gone there would be no way back.
         var canHide: Bool { self != .settings }
