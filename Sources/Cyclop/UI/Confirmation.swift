@@ -32,7 +32,7 @@ struct CopyButton: View {
         } label: {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(copied ? Color.green : Theme.secondary)
+                .foregroundStyle(copied ? Theme.success : Theme.secondary)
         }
         .buttonStyle(.plain)
         .help(localized("Copy"))

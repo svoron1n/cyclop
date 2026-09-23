@@ -25,6 +25,16 @@
 "Show on All Displays" = "Show on All Displays";
 "Full-Height Notch Without a Cutout" = "Full-Height Notch Without a Cutout";
 
+"Appearance" = "Appearance";
+"Standard" = "Standard";
+"Forró Dark" = "Forró Dark";
+"Forró Light" = "Forró Light";
+"Background" = "Background";
+"Header" = "Header";
+"Tab Icons" = "Tab Icons";
+"Accent" = "Accent";
+"As in the Theme" = "As in the Theme";
+
 "Screenshots" = "Screenshots";
 "Save Clipboard Screenshots" = "Save Clipboard Screenshots";
 "Watch Screenshots Folder" = "Watch Screenshots Folder";

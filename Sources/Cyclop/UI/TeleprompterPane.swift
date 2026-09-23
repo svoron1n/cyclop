@@ -10,6 +10,7 @@ struct TeleprompterPane: View {
     @Binding var wantsKeyboard: Bool
 
     @State private var editing = false
+    @Environment(\.palette) private var palette
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -77,7 +78,7 @@ struct TeleprompterPane: View {
             ScrollView(.vertical, showsIndicators: false) {
                 Text(prompter.script)
                     .font(.system(size: prompter.fontSize, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .lineSpacing(prompter.fontSize * 0.34)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,7 +121,7 @@ struct TeleprompterPane: View {
     /// as the script being clipped rather than continuing.
     private func fade(_ edge: VerticalEdge) -> some View {
         LinearGradient(
-            colors: [.black, .black.opacity(0)],
+            colors: [palette.background, palette.background.opacity(0)],
             startPoint: edge == .top ? .top : .bottom,
             endPoint: edge == .top ? .bottom : .top
         )
@@ -145,7 +146,7 @@ struct TeleprompterPane: View {
         TextEditor(text: $prompter.script)
             .font(.system(size: 13, design: .rounded))
             .scrollContentBackground(.hidden)
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.text)
             .focused($focused)
             // Inside the surface, so the box keeps its size and the text moves
             // in from its edges.
@@ -185,7 +186,7 @@ struct TeleprompterPane: View {
                 .buttonStyle(.plain)
                 .pointerStyle(.default)
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(prompter.script.isEmpty ? Theme.tertiary : .white)
+                .foregroundStyle(prompter.script.isEmpty ? Theme.tertiary : Theme.text)
                 .disabled(prompter.script.isEmpty)
             } else {
                 Button { prompter.rewind() } label: {
@@ -226,7 +227,7 @@ struct TeleprompterPane: View {
         HStack(spacing: 7) {
             Slider(value: $prompter.speed, in: 0.3...3.0)
                 .controlSize(.mini)
-                .tint(.white.opacity(0.7))
+                .tint(Theme.text.opacity(0.7))
                 .frame(width: 96)
             Text(String(format: "%.1f×", prompter.speed))
                 .font(.system(size: 11, weight: .medium, design: .monospaced))

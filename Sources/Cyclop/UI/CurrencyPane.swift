@@ -102,7 +102,7 @@ struct CurrencyPane: View {
                 HStack(spacing: 6) {
                     Text(code.uppercased())
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
                     Text(name)
                         .font(.system(size: 10))
                         .foregroundStyle(Theme.tertiary)
@@ -125,7 +125,7 @@ struct CurrencyPane: View {
             TextField("0", text: text)
             .textFieldStyle(.plain)
             .font(.system(size: 26, weight: .medium).monospacedDigit())
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.text)
             .tint(Theme.secondary)
             .focused($focused, equals: side)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -156,7 +156,7 @@ struct CurrencyPane: View {
                 TextField(localized("Search currency"), text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 11))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .tint(Theme.secondary)
                     .focused($focused, equals: .search)
                     .onKeyPress(.escape) {
@@ -180,7 +180,7 @@ struct CurrencyPane: View {
                     .buttonStyle(.plain)
                     .pointerStyle(.default)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
             }
             .padding(.horizontal, 9)
             .frame(height: 24)
@@ -211,7 +211,7 @@ struct CurrencyPane: View {
                                 HStack(spacing: 8) {
                                     Text(currency.displayCode)
                                         .font(.system(size: 11, weight: .semibold).monospaced())
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(Theme.text)
                                         .frame(width: 44, alignment: .leading)
                                     Text(currency.name)
                                         .font(.system(size: 11))
@@ -221,14 +221,14 @@ struct CurrencyPane: View {
                                     if currency.code == selected {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(Theme.text)
                                     }
                                 }
                                 .padding(.horizontal, 8)
                                 .frame(height: 26)
                                 .background(
                                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                        .fill(currency.code == selected ? Theme.surfaceHover : Color.clear)
+                                        .fill(currency.code == selected ? Theme.surfaceHover : Theme.clear)
                                 )
                                 .contentShape(Rectangle())
                             }

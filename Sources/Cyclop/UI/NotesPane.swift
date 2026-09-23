@@ -53,7 +53,7 @@ struct NotesPane: View {
                 Button { privacy.reveal("note.\(id)") } label: {
                     Image(systemName: "eye")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(Color.black.opacity(0.65)))
                 }
@@ -152,7 +152,7 @@ struct NotesPane: View {
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.hidden)
                 .font(.system(size: 12.5))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .tint(Theme.secondary)
                 .focused($focused)
                 // The editor insets its text by a few points of its own; pull
@@ -273,7 +273,7 @@ private struct NoteRow: View {
             } else {
                 Text(preview)
                     .font(.system(size: 11, weight: isSelected ? .medium : .regular))
-                    .foregroundStyle(isSelected ? .white : Theme.secondary)
+                    .foregroundStyle(isSelected ? Theme.text : Theme.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -296,7 +296,7 @@ private struct NoteRow: View {
         .frame(height: 26)
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(isSelected ? Theme.surfaceHover : hovering ? Theme.surface : .clear)
+                .fill(isSelected ? Theme.surfaceHover : hovering ? Theme.surface : Theme.clear)
         )
         .contentShape(Rectangle())
         .onTapGesture(perform: select)

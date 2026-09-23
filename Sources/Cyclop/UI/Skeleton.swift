@@ -6,6 +6,7 @@ import SwiftUI
 struct SkeletonBox: View {
     var cornerRadius: CGFloat = 14
     @State private var sweep = false
+    @Environment(\.palette) private var palette
 
     var body: some View {
         GeometryReader { geo in
@@ -13,7 +14,7 @@ struct SkeletonBox: View {
                 .fill(Theme.surface)
                 .overlay(
                     LinearGradient(
-                        colors: [.clear, .white.opacity(0.10), .clear],
+                        colors: [.clear, palette.text.opacity(0.10), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -43,7 +44,7 @@ struct EqualizerBars: View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(0..<3, id: \.self) { index in
                 Capsule()
-                    .fill(Theme.tertiary)
+                    .fill(Theme.headerText)
                     .frame(width: 2, height: up ? high[index] : low[index])
                     .animation(
                         isAnimating
