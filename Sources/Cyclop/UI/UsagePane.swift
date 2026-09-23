@@ -45,35 +45,80 @@ struct UsagePane: View {
     // MARK: - Claude
 
     private func claudeColumn(_ tokens: TokenTally) -> some View {
-        column(name: "Claude Code", plan: usage.claudePlan, tokens: tokens) {
+        column(name: "Claude Code", plan: usage.claude.plan, tokens: tokens) {
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                switch usage.claudeState {
-                case .off:
-                    connectPrompt
-                case .loading where usage.claudeLimits.isEmpty:
-                    note(localized("Loading…"))
-                case .signedOut:
-                    note(localized("Claude Code is signed out, or its sign-in has expired. Run it once and it renews."))
-                case .failed(let reason) where usage.claudeLimits.isEmpty:
-                    note(localized("Could not load limits: %@", reason))
-                default:
-                    limits(usage.claudeLimits, now: context.date)
+                if usage.claude.state == .off {
+                    connectPrompt(.claude, localized("Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain."))
+                } else {
+                    live(usage.claude, signedOut: localized("Claude Code is signed out, or its sign-in has expired. Run it once and it renews."), now: context.date)
                 }
             }
         }
     }
 
-    /// Said before the button, not after: this is the one part of the tab
-    /// that goes to the network and into the Keychain, and it asks nobody
-    /// else — `/usr/bin/security` reads the item without a system prompt.
-    private var connectPrompt: some View {
+    // MARK: - Codex
+
+    private func codexColumn(_ tokens: TokenTally) -> some View {
+        column(name: "Codex", plan: usage.codex.plan ?? usage.scan.codexLimits?.plan, tokens: tokens) {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                if usage.codex.state == .off {
+                    VStack(alignment: .leading, spacing: 8) {
+                        logged(now: context.date)
+                        connectPrompt(.codex, localized("Current limits come from OpenAI, with Codex's sign-in from ~/.codex."))
+                    }
+                } else {
+                    live(usage.codex, signedOut: localized("Codex is signed out, or its sign-in has expired. Open it once and it renews."), now: context.date)
+                }
+            }
+        }
+    }
+
+    /// What Codex last wrote into a session log. It reports its limits only
+    /// while it runs, so the figure is as old as the last session — said when
+    /// that is long enough to matter.
+    @ViewBuilder
+    private func logged(now: Date) -> some View {
+        if let snapshot = usage.scan.codexLimits {
+            VStack(alignment: .leading, spacing: 6) {
+                limits(snapshot.limits, now: now)
+                if now.timeIntervalSince(snapshot.observedAt) > 10 * 60 {
+                    Text(localized("Updated %@", Self.ago(snapshot.observedAt, now: now)))
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(Theme.tertiary)
+                }
+            }
+        } else {
+            note(localized("No limits yet: Codex writes them during a session."))
+        }
+    }
+
+    // MARK: - Live limits
+
+    @ViewBuilder
+    private func live(_ live: AIUsageStore.Live, signedOut: String, now: Date) -> some View {
+        switch live.state {
+        case .loading where live.limits.isEmpty:
+            note(localized("Loading…"))
+        case .signedOut:
+            note(signedOut)
+        case .failed(let reason) where live.limits.isEmpty:
+            note(localized("Could not load limits: %@", reason))
+        default:
+            limits(live.limits, now: now)
+        }
+    }
+
+    /// Said before the button, not after: this is the part of the tab that
+    /// goes to the network and reads a sign-in, and it asks nobody else —
+    /// neither `/usr/bin/security` nor a file of one's own raises a prompt.
+    private func connectPrompt(_ tool: AIUsageStore.Tool, _ explanation: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain.")
+            Text(explanation)
                 .font(.system(size: 10))
                 .foregroundStyle(Theme.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
             Button {
-                usage.claudeLimitsEnabled = true
+                usage.setLive(tool, true)
             } label: {
                 Text("Show Limits")
                     .font(.system(size: 11, weight: .medium))
@@ -84,30 +129,6 @@ struct UsagePane: View {
                     .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Codex
-
-    private func codexColumn(_ tokens: TokenTally) -> some View {
-        column(name: "Codex", plan: usage.scan.codexLimits?.plan, tokens: tokens) {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                if let snapshot = usage.scan.codexLimits {
-                    VStack(alignment: .leading, spacing: 6) {
-                        limits(snapshot.limits, now: context.date)
-                        // Codex reports its limits only while it runs, so
-                        // the figure is as old as the last session. Said
-                        // when that is long enough to matter.
-                        if context.date.timeIntervalSince(snapshot.observedAt) > 10 * 60 {
-                            Text(localized("Updated %@", Self.ago(snapshot.observedAt, now: context.date)))
-                                .font(.system(size: 9.5))
-                                .foregroundStyle(Theme.tertiary)
-                        }
-                    }
-                } else {
-                    note(localized("No limits yet: Codex writes them during a session."))
-                }
-            }
         }
     }
 
@@ -252,7 +273,9 @@ struct UsagePane: View {
     static func ago(_ date: Date, now: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: appLanguage)
-        formatter.unitsStyle = .abbreviated
+        // Not `.abbreviated`: in Russian that drops "назад" for a minus
+        // sign, "-3 нед.".
+        formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: now)
     }
 

@@ -76,6 +76,43 @@ struct AIUsageParsingTests {
         #expect(credentials.isExpired(at: Date(timeIntervalSince1970: 1_790_200_000)) == false)
     }
 
+    /// Ответ `wham/usage`: окна в секундах, отдельные лимиты моделей — с
+    /// именем модели, тариф с большой буквы.
+    @Test func codexUsageFromEndpoint() throws {
+        let json = """
+        {"plan_type":"plus","rate_limit":{"allowed":true,
+          "primary_window":{"used_percent":42,"limit_window_seconds":18000,"reset_after_seconds":600,"reset_at":1790501346},
+          "secondary_window":{"used_percent":7,"limit_window_seconds":604800,"reset_after_seconds":3600}},
+         "additional_rate_limits":[{"limit_name":"GPT-5-Codex-Mini","rate_limit":
+          {"primary_window":{"used_percent":3,"limit_window_seconds":18000,"reset_at":1790501346},"secondary_window":null}}]}
+        """
+        let now = Date(timeIntervalSince1970: 1_790_500_000)
+        let usage = try #require(AIUsageParsing.codexUsage(from: Data(json.utf8), now: now))
+        #expect(usage.plan == "Plus")
+        #expect(usage.limits.map(\.minutes) == [300, 10080, 300])
+        #expect(usage.limits.map(\.percent) == [42, 7, 3])
+        #expect(usage.limits.map(\.scope) == [nil, nil, "GPT-5-Codex-Mini"])
+        #expect(usage.limits[0].resetsAt == Date(timeIntervalSince1970: 1_790_501_346))
+        #expect(usage.limits[1].resetsAt == now.addingTimeInterval(3600))
+        #expect(AIUsageParsing.codexUsage(from: Data(#"{"rate_limit":null}"#.utf8), now: now) == nil)
+    }
+
+    /// Срок и тариф берутся из самого токена — в `auth.json` их нет. Вход по
+    /// ключу API лимитов тарифа не имеет.
+    @Test func codexCredentials() throws {
+        let claims = #"{"exp":1790220121,"https://api.openai.com/auth":{"chatgpt_plan_type":"free","chatgpt_account_id":"acc-jwt"}}"#
+        let middle = Data(claims.utf8).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        let json = #"{"auth_mode":"chatgpt","tokens":{"access_token":"h.\#(middle).s","refresh_token":"r","account_id":"acc"}}"#
+        let signIn = try #require(AIUsageParsing.codexCredentials(from: Data(json.utf8)))
+        #expect(signIn.accountID == "acc")
+        #expect(signIn.plan == "Free")
+        #expect(signIn.isExpired(at: Date(timeIntervalSince1970: 1_790_220_100)) == true)
+        #expect(signIn.isExpired(at: Date(timeIntervalSince1970: 1_790_200_000)) == false)
+        #expect(AIUsageParsing.codexCredentials(from: Data(#"{"OPENAI_API_KEY":"sk-x","tokens":null}"#.utf8)) == nil)
+    }
+
     // MARK: - Журналы
 
     /// Служебные ответы самого Claude Code (`<synthetic>`) никуда не

@@ -156,3 +156,6 @@
 "%@K" = "%@ тыс.";
 "%@M" = "%@ млн";
 "%@B" = "%@ млрд";
+"Codex Limits from OpenAI" = "Лимиты Codex с сервера OpenAI";
+"Current limits come from OpenAI, with Codex's sign-in from ~/.codex." = "Актуальные лимиты — у OpenAI, по входу Codex из ~/.codex.";
+"Codex is signed out, or its sign-in has expired. Open it once and it renews." = "Codex не авторизован или его вход истёк. Откройте его — он обновит вход сам.";

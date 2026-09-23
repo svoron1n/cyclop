@@ -19,6 +19,7 @@ struct SettingsPane: View {
     @State private var fullSizeNotch = NotchGeometry.drawsFullSizeNotch
     @State private var watchScreenshotFolder = false
     @State private var claudeLimits = false
+    @State private var codexLimits = false
     @State private var screenshotUsage: (files: Int, bytes: Int64) = (0, 0)
     /// The colour row whose swatches are open — one at a time.
     @State private var editingColor: ColorSlot?
@@ -111,7 +112,12 @@ struct SettingsPane: View {
                     toggleRow(
                         symbol: "key",
                         title: localized("Claude Limits from Keychain"),
-                        isOn: claudeLimitsBinding
+                        isOn: liveLimitsBinding(.claude, $claudeLimits)
+                    )
+                    toggleRow(
+                        symbol: "key",
+                        title: localized("Codex Limits from OpenAI"),
+                        isOn: liveLimitsBinding(.codex, $codexLimits)
                     )
                 }
 
@@ -152,7 +158,8 @@ struct SettingsPane: View {
             allDisplays = NotchGeometry.showsOnAllDisplays
             fullSizeNotch = NotchGeometry.drawsFullSizeNotch
             watchScreenshotFolder = screenshots.isEnabled
-            claudeLimits = vm.usage.claudeLimitsEnabled
+            claudeLimits = vm.usage.isLive(.claude)
+            codexLimits = vm.usage.isLive(.codex)
             refreshUsage()
         }
     }
@@ -251,12 +258,12 @@ struct SettingsPane: View {
         )
     }
 
-    private var claudeLimitsBinding: Binding<Bool> {
+    private func liveLimitsBinding(_ tool: AIUsageStore.Tool, _ state: Binding<Bool>) -> Binding<Bool> {
         Binding(
-            get: { claudeLimits },
+            get: { state.wrappedValue },
             set: { wants in
-                claudeLimits = wants
-                vm.usage.claudeLimitsEnabled = wants
+                state.wrappedValue = wants
+                vm.usage.setLive(tool, wants)
             }
         )
     }

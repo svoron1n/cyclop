@@ -156,3 +156,6 @@
 "%@K" = "%@K";
 "%@M" = "%@M";
 "%@B" = "%@B";
+"Codex Limits from OpenAI" = "Codex Limits from OpenAI";
+"Current limits come from OpenAI, with Codex's sign-in from ~/.codex." = "Current limits come from OpenAI, with Codex's sign-in from ~/.codex.";
+"Codex is signed out, or its sign-in has expired. Open it once and it renews." = "Codex is signed out, or its sign-in has expired. Open it once and it renews.";

@@ -35,7 +35,7 @@ that works is below.
 | **Translate** | Type on the left, the translation appears on the right — by itself, offline, using macOS's own facilities. English goes to Russian, Russian to English; the direction comes from the script the text is written in. macOS does not preinstall language packs, so the first time you have to download one: System Settings → General → Language & Region → "Translation Languages…" |
 | **Currency** | An amount on one side, the other currency on the other; type into either. Rates come over the network — a public table of daily rates, fetched once an hour, and only while the tab is on |
 | **Teleprompter** | A script that scrolls under the camera at a speed you set. The notch is the one place on the screen a teleprompter belongs: reading happens right beside the lens, so on the recording the eyes stay on the camera instead of travelling to a window below it. The panel holds itself open while the text is moving — reading a script means not touching the trackpad |
-| **AI Usage** | Claude Code and Codex side by side, on the right rail: how much of each plan's windows is spent and when they reset, plus tokens today and over 7 days. Tokens and Codex's limits come from their own logs in `~/.claude` and `~/.codex`. Claude's limits are off until you press "Show Limits": then the tab reads Claude Code's sign-in from the Keychain and asks `api.anthropic.com` for the same numbers its `/usage` command shows |
+| **AI Usage** | Claude Code and Codex side by side, on the right rail: how much of each plan's windows is spent and when they reset, plus tokens today and over 7 days. Tokens come from their own logs in `~/.claude` and `~/.codex`, and so do Codex's limits — as of its last session. Current limits are off until you press "Show Limits" in a column: then the tab takes the tool's own sign-in (Claude Code's from the Keychain, Codex's from `~/.codex/auth.json`) and asks `api.anthropic.com` or `chatgpt.com` for the same numbers `/usage` and `/status` show |
 | **Notes** | Scratch, on the right rail of icons: jot something down, come back, delete it or carry it off through the clipboard. Hovering lands with the caret ready; blank notes sweep themselves out |
 
 The panel opens when the pointer reaches the notch and collapses when it leaves.
@@ -214,7 +214,7 @@ Sources/Cyclop
 │   ├── Translator.swift       Translation.framework, direction by script
 │   ├── CurrencyStore.swift    rates over the network
 │   ├── AIUsageScanner.swift   Claude Code and Codex logs: tokens and limits
-│   ├── AIUsageStore.swift     the AI tab: rescans, Claude limits from Anthropic
+│   ├── AIUsageStore.swift     the AI tab: rescans, current limits from both vendors
 │   ├── TeleprompterStore.swift the script and where reading it has got to
 │   ├── ScreenshotFolderWatcher.swift  screenshots saved to disk, onto the shelf
 │   └── CalendarStore.swift    EventKit: next meetings and the call link

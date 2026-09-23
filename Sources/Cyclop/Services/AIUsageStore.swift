@@ -7,62 +7,52 @@ import Foundation
 /// on screen and cancels it on the way out — a tally nobody is looking at is
 /// not worth a pass over hundreds of megabytes of transcripts.
 ///
-/// Codex's limits come from its own logs, like the tokens. Claude Code keeps
-/// none there: the only source is the endpoint behind its `/usage` command,
-/// which answers to Claude Code's own sign-in. That makes it the one part of
-/// the tab that reaches the network and the Keychain, so it is off until the
-/// user turns it on with the button in the pane.
+/// Limits come two ways. Codex writes its own into the session log, but only
+/// while it runs, so what the log says is as old as the last session. Claude
+/// Code keeps none on disk at all. Both answer the question live from the
+/// endpoint behind their own `/usage` and `/status`, with their own sign-in —
+/// the one part of the tab that reaches the network and reads a credential,
+/// so each is off until the user turns it on with the button in the pane.
 @MainActor
 final class AIUsageStore: ObservableObject {
-    enum ClaudeState: Equatable {
+    enum Tool: String, Sendable {
+        case claude, codex
+    }
+
+    enum LiveState: Equatable {
         /// Not turned on. The pane offers the button.
         case off
         case loading
         case ready
-        /// No sign-in to use, or one that has run out. Claude Code renews it
-        /// the next time it runs; the tab never does.
+        /// No sign-in to use, or one that has run out. The tool renews it the
+        /// next time it runs; the tab never does.
         case signedOut
         case failed(String)
     }
 
+    /// Limits as the vendor's endpoint gave them.
+    struct Live: Equatable {
+        var state: LiveState = .off
+        var limits: [UsageLimit] = []
+        var plan: String?
+    }
+
     @Published private(set) var scan = UsageScan()
     @Published private(set) var hasScanned = false
-    @Published private(set) var claudeLimits: [UsageLimit] = []
-    @Published private(set) var claudeFetchedAt: Date?
-    @Published private(set) var claudePlan: String?
-    @Published private(set) var claudeState: ClaudeState = .off
-
-    /// Per Mac, not in `config.json`: it is consent to read this Mac's
-    /// Keychain, and a copied config must not carry that to another one.
-    var claudeLimitsEnabled: Bool {
-        get { defaults.bool(forKey: Self.enabledKey) }
-        set {
-            defaults.set(newValue, forKey: Self.enabledKey)
-            if newValue {
-                claudeState = .loading
-                Task { await fetchClaudeLimits(force: true) }
-            } else {
-                credentials = nil
-                claudeLimits = []
-                claudeFetchedAt = nil
-                claudeState = .off
-            }
-        }
-    }
+    @Published private(set) var claude = Live()
+    @Published private(set) var codex = Live()
 
     private let scanner = UsageScanner()
     private let defaults = UserDefaults.standard
-    private static let enabledKey = "usage.claudeLimits"
-    /// Held in memory only, and read again only once it has run out.
-    private var credentials: ClaudeCredentials?
-    private var lastFetch: Date?
-    private var isFetching = false
-    /// The endpoint answers too-frequent callers with 429, and the numbers
-    /// behind it do not move faster than this anyway.
+    /// Held in memory only, and read again only once they have run out.
+    private var signIns: [Tool: SignIn] = [:]
+    private var lastFetch: [Tool: Date] = [:]
+    private var fetching: Set<Tool> = []
+    /// The endpoints answer too-frequent callers with 429, and the numbers
+    /// behind them do not move faster than this anyway.
     private let fetchInterval: TimeInterval = 120
     private let rescanInterval = Duration.seconds(60)
 
-    private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
     private let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.urlCache = nil
@@ -71,8 +61,45 @@ final class AIUsageStore: ObservableObject {
     }()
 
     init() {
-        if claudeLimitsEnabled { claudeState = .loading }
+        for tool in [Tool.claude, .codex] where isLive(tool) {
+            self[tool].state = .loading
+        }
     }
+
+    // MARK: - Consent
+
+    /// Per Mac, not in `config.json`: it is consent to read this Mac's
+    /// credentials, and a copied config must not carry that to another one.
+    func isLive(_ tool: Tool) -> Bool {
+        defaults.bool(forKey: Self.enabledKey(tool))
+    }
+
+    func setLive(_ tool: Tool, _ on: Bool) {
+        defaults.set(on, forKey: Self.enabledKey(tool))
+        if on {
+            self[tool].state = .loading
+            Task { await fetch(tool, force: true) }
+        } else {
+            signIns[tool] = nil
+            self[tool] = Live()
+        }
+    }
+
+    private static func enabledKey(_ tool: Tool) -> String {
+        "usage.\(tool.rawValue)Limits"
+    }
+
+    private subscript(tool: Tool) -> Live {
+        get { tool == .claude ? claude : codex }
+        set {
+            switch tool {
+            case .claude: claude = newValue
+            case .codex: codex = newValue
+            }
+        }
+    }
+
+    // MARK: - Refresh
 
     /// Rescans for as long as the calling task lives — the pane's `.task`.
     func watch() async {
@@ -85,60 +112,89 @@ final class AIUsageStore: ObservableObject {
     func refresh() async {
         scan = await scanner.scan()
         hasScanned = true
-        if claudeLimitsEnabled { await fetchClaudeLimits(force: false) }
+        await withTaskGroup(of: Void.self) { group in
+            for tool in [Tool.claude, .codex] where isLive(tool) {
+                group.addTask { await self.fetch(tool, force: false) }
+            }
+        }
     }
 
-    // MARK: - Claude limits
+    private func fetch(_ tool: Tool, force: Bool) async {
+        guard !fetching.contains(tool) else { return }
+        if !force, let last = lastFetch[tool], Date().timeIntervalSince(last) < fetchInterval { return }
+        fetching.insert(tool)
+        defer { fetching.remove(tool) }
+        lastFetch[tool] = Date()
 
-    private func fetchClaudeLimits(force: Bool) async {
-        guard !isFetching else { return }
-        if !force, let lastFetch, Date().timeIntervalSince(lastFetch) < fetchInterval { return }
-        isFetching = true
-        defer { isFetching = false }
-        lastFetch = Date()
-
-        if credentials?.isExpired(at: Date()) ?? true {
-            credentials = await Self.readCredentials()
+        if signIns[tool]?.isExpired(at: Date()) ?? true {
+            signIns[tool] = await Self.readSignIn(tool)
         }
-        guard let credentials, !credentials.isExpired(at: Date()) else {
-            claudeState = .signedOut
+        guard let signIn = signIns[tool], !signIn.isExpired(at: Date()) else {
+            self[tool].state = .signedOut
             return
         }
-        claudePlan = credentials.plan
-
-        var request = URLRequest(url: Self.usageURL)
-        request.setValue("Bearer \(credentials.accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        self[tool].plan = signIn.plan
 
         do {
-            let (data, response) = try await session.data(for: request)
-            guard claudeLimitsEnabled else { return }
+            let (data, response) = try await session.data(for: Self.request(tool, signIn: signIn))
+            guard isLive(tool) else { return }
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             switch status {
             case 200..<300:
-                guard let limits = AIUsageParsing.claudeLimits(from: data) else {
-                    claudeState = .failed(localized("Unexpected answer"))
+                let parsed: (plan: String?, limits: [UsageLimit])? = switch tool {
+                case .claude: AIUsageParsing.claudeLimits(from: data).map { (nil, $0) }
+                case .codex: AIUsageParsing.codexUsage(from: data, now: Date()).map { ($0.plan, $0.limits) }
+                }
+                guard let parsed else {
+                    self[tool].state = .failed(localized("Unexpected answer"))
                     return
                 }
-                claudeLimits = limits
-                claudeFetchedAt = Date()
-                claudeState = .ready
+                self[tool].limits = parsed.limits
+                if let plan = parsed.plan { self[tool].plan = plan }
+                self[tool].state = .ready
             case 401, 403:
-                // Revoked or replaced by a newer sign-in: read the Keychain
-                // again next time instead of retrying a token that is dead.
-                self.credentials = nil
-                claudeState = .signedOut
+                // Revoked or replaced by a newer sign-in: read it again next
+                // time instead of retrying a token that is dead.
+                signIns[tool] = nil
+                self[tool].state = .signedOut
             case 429:
                 // Too soon. What is on screen is at most a couple of minutes
                 // old, which is better than an error in its place.
-                if claudeLimits.isEmpty { claudeState = .failed(localized("Too many requests")) }
+                if self[tool].limits.isEmpty { self[tool].state = .failed(localized("Too many requests")) }
             default:
-                claudeState = .failed("HTTP \(status)")
+                self[tool].state = .failed("HTTP \(status)")
             }
         } catch {
-            if claudeLimits.isEmpty { claudeState = .failed(error.localizedDescription) }
+            if self[tool].limits.isEmpty { self[tool].state = .failed(error.localizedDescription) }
         }
+    }
+
+    private static func request(_ tool: Tool, signIn: SignIn) -> URLRequest {
+        var request: URLRequest
+        switch tool {
+        case .claude:
+            request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
+            request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        case .codex:
+            request = URLRequest(url: URL(string: "https://chatgpt.com/backend-api/wham/usage")!)
+            if let account = signIn.accountID {
+                request.setValue(account, forHTTPHeaderField: "ChatGPT-Account-Id")
+            }
+        }
+        request.setValue("Bearer \(signIn.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        return request
+    }
+
+    // MARK: - Sign-ins
+
+    private nonisolated static func readSignIn(_ tool: Tool) async -> SignIn? {
+        await Task.detached(priority: .utility) {
+            switch tool {
+            case .claude: readClaudeSignIn()
+            case .codex: readCodexSignIn()
+            }
+        }.value
     }
 
     /// Claude Code's sign-in, read the way Claude Code itself reads it back:
@@ -148,32 +204,39 @@ final class AIUsageStore: ObservableObject {
     /// nowhere sensible to appear above a panel that is never active. The
     /// consent is the button in the pane, which says what it reads. On
     /// Linux-style setups the same JSON lives in a file instead.
-    private nonisolated static func readCredentials() async -> ClaudeCredentials? {
-        await Task.detached(priority: .utility) {
-            let file = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".claude/.credentials.json")
-            if let data = try? Data(contentsOf: file),
-               let credentials = AIUsageParsing.claudeCredentials(from: data) {
-                return credentials
-            }
+    private nonisolated static func readClaudeSignIn() -> SignIn? {
+        let file = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/.credentials.json")
+        if let data = try? Data(contentsOf: file),
+           let signIn = AIUsageParsing.claudeCredentials(from: data) {
+            return signIn
+        }
 
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-            process.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
-            let output = Pipe()
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            do {
-                try process.run()
-            } catch {
-                return nil
-            }
-            // Drained before waiting: a pipe that fills up would block the
-            // tool on its write and this on the wait, for ever.
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            return AIUsageParsing.claudeCredentials(from: data)
-        }.value
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+        // Drained before waiting: a pipe that fills up would block the
+        // tool on its write and this on the wait, for ever.
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        return AIUsageParsing.claudeCredentials(from: data)
+    }
+
+    /// Codex keeps its sign-in in a file, readable by the user and nobody
+    /// else — the same file the CLI and the ChatGPT app share.
+    private nonisolated static func readCodexSignIn() -> SignIn? {
+        let file = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex/auth.json")
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        return AIUsageParsing.codexCredentials(from: data)
     }
 }

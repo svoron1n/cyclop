@@ -126,13 +126,13 @@ enum AIUsageParsing {
     }
 
     /// Claude Code's own sign-in, as it keeps it in the Keychain.
-    static func claudeCredentials(from data: Data) -> ClaudeCredentials? {
+    static func claudeCredentials(from data: Data) -> SignIn? {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let oauth = object["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String, !token.isEmpty else { return nil }
         let expires = number(oauth["expiresAt"]).map { Date(timeIntervalSince1970: $0 / 1000) }
         let plan = claudePlan(subscription: oauth["subscriptionType"] as? String, tier: oauth["rateLimitTier"] as? String)
-        return ClaudeCredentials(accessToken: token, expiresAt: expires, plan: plan)
+        return SignIn(accessToken: token, accountID: nil, expiresAt: expires, plan: plan)
     }
 
     // MARK: Codex
@@ -168,11 +168,73 @@ enum AIUsageParsing {
             return UsageLimit(minutes: minutes, scope: nil, percent: percent, resetsAt: resets)
         }
         guard !limits.isEmpty else { return nil }
-        let plan = (object["plan_type"] as? String).map { $0.prefix(1).uppercased() + $0.dropFirst() }
-        return CodexLimits(plan: plan, limits: limits, observedAt: observedAt)
+        return CodexLimits(plan: capitalized(object["plan_type"] as? String), limits: limits, observedAt: observedAt)
+    }
+
+    /// The answer of `chatgpt.com/backend-api/wham/usage` — what `/status`
+    /// shows inside Codex. Same windows as the session logs, spelled in
+    /// seconds; `additional_rate_limits` are the caps some models keep apart,
+    /// named by the model.
+    static func codexUsage(from data: Data, now: Date) -> CodexLimits? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+
+        func windows(_ rateLimit: Any?, scope: String?) -> [UsageLimit] {
+            guard let rateLimit = rateLimit as? [String: Any] else { return [] }
+            return ["primary_window", "secondary_window"].compactMap { key in
+                guard let window = rateLimit[key] as? [String: Any],
+                      let percent = number(window["used_percent"]) else { return nil }
+                var resets: Date?
+                if let at = number(window["reset_at"]) {
+                    resets = Date(timeIntervalSince1970: at)
+                } else if let seconds = number(window["reset_after_seconds"]) {
+                    resets = now.addingTimeInterval(seconds)
+                }
+                let minutes = number(window["limit_window_seconds"]).map { Int($0) / 60 }
+                return UsageLimit(minutes: minutes, scope: scope, percent: percent, resetsAt: resets)
+            }
+        }
+
+        var limits = windows(object["rate_limit"], scope: nil)
+        for extra in object["additional_rate_limits"] as? [[String: Any]] ?? [] {
+            let name = extra["limit_name"] as? String ?? extra["metered_feature"] as? String
+            limits += windows(extra["rate_limit"], scope: name)
+        }
+        guard !limits.isEmpty else { return nil }
+        return CodexLimits(plan: capitalized(object["plan_type"] as? String), limits: limits, observedAt: now)
+    }
+
+    /// Codex's own sign-in from `auth.json`. The file holds no expiry of its
+    /// own; the access token is a JWT and says it, along with the plan. A key
+    /// pasted in instead of a ChatGPT sign-in has no plan limits to show.
+    static func codexCredentials(from data: Data) -> SignIn? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tokens = object["tokens"] as? [String: Any],
+              let token = tokens["access_token"] as? String, !token.isEmpty else { return nil }
+        let claims = jwtClaims(token)
+        let auth = claims?["https://api.openai.com/auth"] as? [String: Any]
+        let account = tokens["account_id"] as? String ?? auth?["chatgpt_account_id"] as? String
+        let expires = number(claims?["exp"]).map { Date(timeIntervalSince1970: $0) }
+        return SignIn(accessToken: token, accountID: account, expiresAt: expires,
+                      plan: capitalized(auth?["chatgpt_plan_type"] as? String))
+    }
+
+    /// The middle of a JWT, unverified — only read to know when to stop
+    /// sending it; the server is the one that checks it.
+    static func jwtClaims(_ token: String) -> [String: Any]? {
+        let parts = token.split(separator: ".")
+        guard parts.count == 3 else { return nil }
+        var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 
     // MARK: Values
+
+    static func capitalized(_ text: String?) -> String? {
+        guard let text, !text.isEmpty else { return nil }
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
 
     static func number(_ value: Any?) -> Double? {
         switch value {
@@ -193,11 +255,13 @@ enum AIUsageParsing {
     }
 }
 
-/// The part of Claude Code's sign-in the tab needs. The refresh token is
-/// never read out: renewing the sign-in is Claude Code's business, and doing
-/// it from here would rotate the token from under it and sign it out.
-struct ClaudeCredentials: Sendable {
+/// The part of a tool's sign-in the tab needs. The refresh token is never
+/// read out: renewing the sign-in is the tool's business, and doing it from
+/// here would rotate the token from under it and sign it out.
+struct SignIn: Sendable {
     let accessToken: String
+    /// Codex's ChatGPT account, sent along with the token.
+    let accountID: String?
     let expiresAt: Date?
     let plan: String?
 
