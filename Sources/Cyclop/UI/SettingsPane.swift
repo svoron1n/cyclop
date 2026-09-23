@@ -18,6 +18,8 @@ struct SettingsPane: View {
     @State private var allDisplays = NotchGeometry.showsOnAllDisplays
     @State private var fullSizeNotch = NotchGeometry.drawsFullSizeNotch
     @State private var watchScreenshotFolder = false
+    @State private var claudeLimits = false
+    @State private var codexLimits = false
     @State private var screenshotUsage: (files: Int, bytes: Int64) = (0, 0)
     /// The colour row whose swatches are open — one at a time.
     @State private var editingColor: ColorSlot?
@@ -103,6 +105,22 @@ struct SettingsPane: View {
                     }
                 }
 
+                // The way back out of the button on the AI tab: turning the
+                // limits on is done there, where it is explained; here it
+                // can only be seen and undone.
+                section(localized("AI Usage")) {
+                    toggleRow(
+                        symbol: "key",
+                        title: localized("Claude Limits from Keychain"),
+                        isOn: liveLimitsBinding(.claude, $claudeLimits)
+                    )
+                    toggleRow(
+                        symbol: "key",
+                        title: localized("Codex Limits from OpenAI"),
+                        isOn: liveLimitsBinding(.codex, $codexLimits)
+                    )
+                }
+
                 // What lives in this file is documented in #67: everything
                 // above that makes sense on another Mac, in one place instead
                 // of five.
@@ -140,6 +158,8 @@ struct SettingsPane: View {
             allDisplays = NotchGeometry.showsOnAllDisplays
             fullSizeNotch = NotchGeometry.drawsFullSizeNotch
             watchScreenshotFolder = screenshots.isEnabled
+            claudeLimits = vm.usage.isLive(.claude)
+            codexLimits = vm.usage.isLive(.codex)
             refreshUsage()
         }
     }
@@ -234,6 +254,16 @@ struct SettingsPane: View {
                     screenshots.disable()
                     watchScreenshotFolder = false
                 }
+            }
+        )
+    }
+
+    private func liveLimitsBinding(_ tool: AIUsageStore.Tool, _ state: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { state.wrappedValue },
+            set: { wants in
+                state.wrappedValue = wants
+                vm.usage.setLive(tool, wants)
             }
         )
     }

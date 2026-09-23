@@ -131,3 +131,31 @@
 "Paste the script here" = "Вставьте сюда сценарий";
 "Ready" = "Готово";
 "Done" = "Готово";
+
+/* Вкладка «Лимиты ИИ»: лимиты и токены Claude Code и Codex. Длина окна
+   сокращена так же, как отсчёт до встречи: сокращение не склоняется. */
+"AI Usage" = "Лимиты ИИ";
+"Claude Limits from Keychain" = "Лимиты Claude из связки ключей";
+"Loading…" = "Загрузка…";
+"Claude Code is signed out, or its sign-in has expired. Run it once and it renews." = "Claude Code не авторизован или его вход истёк. Запустите его — он обновит вход сам.";
+"Could not load limits: %@" = "Не удалось загрузить лимиты: %@";
+"Unexpected answer" = "Непонятный ответ";
+"Too many requests" = "Слишком много запросов";
+"Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain." = "Лимиты запрашиваются у Anthropic со входом самого Claude Code — он берётся из связки ключей.";
+"Show Limits" = "Показать лимиты";
+"Updated %@" = "Обновлено %@";
+"No limits yet: Codex writes them during a session." = "Лимитов пока нет: Codex записывает их во время сессии.";
+"Tokens: today %@ · 7 days %@" = "Токены: сегодня %@ · за 7 дней %@";
+"No Claude Code or Codex on this Mac" = "На этом Mac нет ни Claude Code, ни Codex";
+"The tab reads their logs in ~/.claude and ~/.codex" = "Вкладка читает их журналы в ~/.claude и ~/.codex";
+"Week" = "Неделя";
+"%d d" = "%d дн";
+"%d h" = "%d ч";
+"%d min" = "%d мин";
+"Limit" = "Лимит";
+"%@K" = "%@ тыс.";
+"%@M" = "%@ млн";
+"%@B" = "%@ млрд";
+"Codex Limits from OpenAI" = "Лимиты Codex с сервера OpenAI";
+"Current limits come from OpenAI, with Codex's sign-in from ~/.codex." = "Актуальные лимиты — у OpenAI, по входу Codex из ~/.codex.";
+"Codex is signed out, or its sign-in has expired. Open it once and it renews." = "Codex не авторизован или его вход истёк. Откройте его — он обновит вход сам.";
