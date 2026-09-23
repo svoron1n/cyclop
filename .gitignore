@@ -4,6 +4,7 @@ build/
 *.xcodeproj
 *.xcworkspace
 .swiftpm/
+.idea/
 
 # Чтобы секрет не уехал в публичный репозиторий по случайности
 .env
