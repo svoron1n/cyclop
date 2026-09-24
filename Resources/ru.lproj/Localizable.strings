@@ -99,7 +99,7 @@
 "Calendar access is off" = "Доступ к Календарю закрыт";
 "Settings → Privacy → Calendars" = "Настройки → Конфиденциальность → Календари";
 "No more meetings" = "Встреч больше нет";
-"Nothing on the calendar for the next day" = "В ближайшие сутки календарь пуст";
+"Nothing on the calendar this week" = "На неделе календарь пуст";
 "Untitled" = "Без названия";
 "Calendars" = "Календари";
 "Done" = "Готово";
@@ -109,6 +109,7 @@
    не полное слово с падежом, а сокращение не склоняется ни в каком языке. */
 "now" = "идёт сейчас";
 "any moment" = "вот-вот";
+"today" = "сегодня";
 "tomorrow" = "завтра";
 "in %d min" = "через %d мин";
 "in %d h" = "через %d ч";

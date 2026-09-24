@@ -171,7 +171,7 @@ costs — eighteen notes on decisions the code does not show:
   the clipboard history.
 - The join button appears only if the call link is in the event itself — in the
   location field, the notes or the URL. Meet, Zoom, Teams, Webex, Whereby, Jitsi,
-  Telemost and Discord are recognised.
+  Telemost, Kontur.Talk and Discord are recognised.
 - A screenshot from the iPhone arrives through Universal Clipboard, so it needs
   what that needs: one Apple ID, Bluetooth and Wi-Fi on, Handoff enabled and the
   devices near each other. And it overwrites the clipboard on the Mac — what was

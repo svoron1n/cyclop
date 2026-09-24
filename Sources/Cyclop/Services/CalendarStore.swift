@@ -316,6 +316,8 @@ enum MeetingLink {
         "meet.jit.si": "Jitsi",
         "discord.gg": "Discord",
         "telemost.yandex.ru": "Телемост",
+        "telemost.360.yandex.ru": "Телемост",
+        "ktalk.ru": "Толк",
     ]
 
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)

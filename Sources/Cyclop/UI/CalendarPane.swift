@@ -160,34 +160,60 @@ struct CalendarPane: View {
         .padding(.top, 4)
     }
 
-    /// Everything after the next meeting, as a column on the right. A meeting
-    /// that overlaps `next` in time gets its own Join button — otherwise the
-    /// only way in is switching to Calendar, and the whole point of an
-    /// overlap is that two meetings are joinable right now, not just one.
+    /// A run of meetings that share a day, under one heading.
+    private struct Day: Identifiable {
+        let start: Date
+        var meetings: [CalendarStore.Meeting]
+        var id: Date { start }
+    }
+
+    /// Lines the right column has room for, headings included — a heading
+    /// takes a line like a meeting does, so a week of one daily stand-up
+    /// fits fewer meetings than a single busy afternoon, and that is right:
+    /// the column is a glance, not the week.
+    private static let restLines = 7
+
+    /// `upcoming`, cut into days and trimmed to `restLines`. A day never
+    /// ends up as a heading with nothing under it.
+    private var days: [Day] {
+        let calendar = Foundation.Calendar.current
+        var days: [Day] = []
+        var lines = 0
+        for meeting in self.calendar.upcoming {
+            let start = calendar.startOfDay(for: meeting.start)
+            let isNewDay = days.last?.start != start
+            let cost = isNewDay ? 2 : 1
+            guard lines + cost <= Self.restLines else { break }
+            lines += cost
+            if isNewDay {
+                days.append(Day(start: start, meetings: [meeting]))
+            } else {
+                days[days.count - 1].meetings.append(meeting)
+            }
+        }
+        return days
+    }
+
+    /// Everything after the next meeting, as a column on the right, under a
+    /// heading per day. Times alone were ambiguous the moment the list ran
+    /// past today: a week of the same stand-up read as one "10:00" repeated,
+    /// with nothing to say which morning each one was.
+    ///
+    /// Every meeting with a call gets its own Join button, not only `next`:
+    /// a link that only the first meeting shows reads as a link the others
+    /// do not have, and the one that matters might be an overlap, or the
+    /// one after a meeting that is about to be skipped.
     private var rest: some View {
         VStack(alignment: .leading, spacing: 7) {
-            ForEach(calendar.upcoming.prefix(4)) { meeting in
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(Color(meeting.calendarColor))
-                        .frame(width: 5, height: 5)
-                    Text(Self.clock.string(from: meeting.start))
-                        .font(.system(size: 10, weight: .medium).monospacedDigit())
-                        .foregroundStyle(Theme.secondary)
-                        .frame(width: 34, alignment: .leading)
-                        .opacity(Foundation.Calendar.current.isDateInToday(meeting.start) ? 1 : 0.6)
-                    SpoilerText(
-                        text: meeting.title,
-                        hidden: hidden,
-                        font: .system(size: 10.5),
-                        color: Theme.tertiary,
-                        height: 11,
-                        seed: UInt64(bitPattern: Int64(meeting.id.hashValue))
-                    )
-                    if meeting.link != nil, let next = calendar.next, meeting.overlaps(next) {
-                        Spacer(minLength: 4)
-                        joinButton(for: meeting)
-                    }
+            ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
+                Text(Self.heading(for: day.start))
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(Theme.tertiary)
+                    .lineLimit(1)
+                    .padding(.top, index == 0 ? 0 : 3)
+                ForEach(day.meetings) { meeting in
+                    row(for: meeting)
                 }
             }
             if calendar.upcoming.isEmpty {
@@ -201,6 +227,30 @@ struct CalendarPane: View {
         // Clears the gear button sitting at the pane's own top-trailing
         // corner (#36) — without this, its first row ran straight under it.
         .padding(.trailing, 26)
+    }
+
+    private func row(for meeting: CalendarStore.Meeting) -> some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(Color(meeting.calendarColor))
+                .frame(width: 5, height: 5)
+            Text(Self.clock.string(from: meeting.start))
+                .font(.system(size: 10, weight: .medium).monospacedDigit())
+                .foregroundStyle(Theme.secondary)
+                .frame(width: 34, alignment: .leading)
+            SpoilerText(
+                text: meeting.title,
+                hidden: hidden,
+                font: .system(size: 10.5),
+                color: Theme.tertiary,
+                height: 11,
+                seed: UInt64(bitPattern: Int64(meeting.id.hashValue))
+            )
+            if meeting.link != nil {
+                Spacer(minLength: 4)
+                joinButton(for: meeting)
+            }
+        }
     }
 
     /// An icon rather than the label the main button spells out: the row has
@@ -217,11 +267,11 @@ struct CalendarPane: View {
                 .background(Circle().fill(Theme.surfaceHover))
         }
         .buttonStyle(.plain)
-        .help(localized("Join"))
+        .help(meeting.provider.map { localized("Join · %@", $0) } ?? localized("Join"))
     }
 
     private func subtitle(for meeting: CalendarStore.Meeting) -> String {
-        var parts = [Self.day(for: meeting.start)].compactMap { $0 }
+        var parts = [Self.day(for: meeting.start)]
         parts.append("\(Self.clock.string(from: meeting.start))–\(Self.clock.string(from: meeting.end))")
         if let provider = meeting.provider { parts.append(provider) }
         return parts.joined(separator: " · ").sentenceCased
@@ -240,13 +290,21 @@ struct CalendarPane: View {
         return formatter
     }()
 
-    /// Nothing for today — the time alone says it. A word for tomorrow, a full
-    /// date for anything further out.
-    static func day(for date: Date) -> String? {
+    /// A word for today and tomorrow, a full date for anything further out.
+    /// Today is named too, not left to the time: the agenda spans a week, and
+    /// a bare "10:00" next to one that says "tomorrow" reads as a guess.
+    static func day(for date: Date) -> String {
         let calendar = Foundation.Calendar.current
-        if calendar.isDateInToday(date) { return nil }
+        if calendar.isDateInToday(date) { return localized("today") }
         if calendar.isDateInTomorrow(date) { return localized("tomorrow") }
         return weekday.string(from: date)
+    }
+
+    /// The day heading in the right column: the same words as `day(for:)`,
+    /// upper-cased like the panel's own section title so it reads as a
+    /// heading and not as one more meeting.
+    static func heading(for date: Date) -> String {
+        day(for: date).uppercased(with: Locale(identifier: appLanguage))
     }
 
     /// "Через 12 мин" / "Идёт сейчас" — shown in the panel header, on its own,
@@ -331,7 +389,7 @@ struct CalendarPane: View {
             Text("No more meetings")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.secondary)
-            Text("Nothing on the calendar for the next day")
+            Text("Nothing on the calendar this week")
                 .font(.system(size: 10))
                 .foregroundStyle(Theme.tertiary)
         }
