@@ -137,7 +137,7 @@
 "AI Usage" = "AI Usage";
 "Claude Limits from Keychain" = "Claude Limits from Keychain";
 "Loading…" = "Loading…";
-"Claude Code is signed out, or its sign-in has expired. Run it once and it renews." = "Claude Code is signed out, or its sign-in has expired. Run it once and it renews.";
+"Claude Code is signed out, or its sign-in has expired. Run “claude” in Terminal once and it renews. The Claude desktop app signs in on its own and won’t help." = "Claude Code is signed out, or its sign-in has expired. Run “claude” in Terminal once and it renews. The Claude desktop app signs in on its own and won’t help.";
 "Could not load limits: %@" = "Could not load limits: %@";
 "Unexpected answer" = "Unexpected answer";
 "Too many requests" = "Too many requests";

@@ -137,7 +137,7 @@
 "AI Usage" = "Лимиты ИИ";
 "Claude Limits from Keychain" = "Лимиты Claude из связки ключей";
 "Loading…" = "Загрузка…";
-"Claude Code is signed out, or its sign-in has expired. Run it once and it renews." = "Claude Code не авторизован или его вход истёк. Запустите его — он обновит вход сам.";
+"Claude Code is signed out, or its sign-in has expired. Run “claude” in Terminal once and it renews. The Claude desktop app signs in on its own and won’t help." = "Claude Code не авторизован или его вход истёк. Запустите «claude» в Терминале — он обновит вход сам. У приложения Claude вход свой, оно не поможет.";
 "Could not load limits: %@" = "Не удалось загрузить лимиты: %@";
 "Unexpected answer" = "Непонятный ответ";
 "Too many requests" = "Слишком много запросов";

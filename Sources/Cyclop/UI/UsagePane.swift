@@ -50,7 +50,7 @@ struct UsagePane: View {
                 if usage.claude.state == .off {
                     connectPrompt(.claude, localized("Limits are fetched from Anthropic with Claude Code's own sign-in, read from the Keychain."))
                 } else {
-                    live(usage.claude, signedOut: localized("Claude Code is signed out, or its sign-in has expired. Run it once and it renews."), now: context.date)
+                    live(usage.claude, signedOut: localized("Claude Code is signed out, or its sign-in has expired. Run “claude” in Terminal once and it renews. The Claude desktop app signs in on its own and won’t help."), now: context.date)
                 }
             }
         }
